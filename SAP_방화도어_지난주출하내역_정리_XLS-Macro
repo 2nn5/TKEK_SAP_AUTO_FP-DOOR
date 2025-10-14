@@ -1,4 +1,4 @@
-Option Explicit
+Option Explicit   ' 삽입-모듈 선택하여 작성 요망
 Sub SAP_방화도어_지난주출하내역_정리()
     Dim ws As Worksheet
     Dim startCell As Range, lastCell As Range
