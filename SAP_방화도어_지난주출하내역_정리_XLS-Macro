@@ -1,0 +1,70 @@
+Option Explicit
+Sub SAP_방화도어_지난주출하내역_정리()
+    Dim ws As Worksheet
+    Dim startCell As Range, lastCell As Range
+    Dim lastRow As Long, lastCol As Long
+    Dim rng As Range
+
+    Set ws = ActiveSheet   ' 또는 Worksheets("시트명")
+
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    On Error GoTo CleanExit
+
+    ' 1) 행/열 삭제
+    On Error Resume Next
+    ws.Rows("1:3").Delete           ' 1:3 삭제
+    ws.Rows("2:2").Delete           ' 2행 삭제
+    ws.Columns("A:A").Delete        ' A열 삭제
+    ' ws.Columns("B:B").Delete     ' (주석 처리된 부분)
+    On Error GoTo CleanExit
+
+    ' 2) 전체 열 너비 자동맞춤
+    ws.UsedRange.Columns.AutoFit
+
+    ' 3) I1에서 ↓, ↓ 후 오른쪽/아래 확장 영역 내용 지우기(근사 구현)
+    If Application.CountA(ws.Cells) > 0 Then
+        If Application.CountA(ws.Columns("I")) > 0 Then
+            Set startCell = ws.Range("I1").End(xlDown)
+            If startCell.Row < ws.Rows.Count Then
+                If Application.CountA(ws.Range(startCell, ws.Cells(ws.Rows.Count, "I"))) > 1 Then
+                    Set startCell = startCell.End(xlDown)
+                End If
+            End If
+        End If
+
+        Set lastCell = ws.Cells.Find(What:="*", LookIn:=xlFormulas, LookAt:=xlPart, _
+                                     SearchOrder:=xlByRows, SearchDirection:=xlPrevious, MatchCase:=False)
+        If Not lastCell Is Nothing And Not startCell Is Nothing Then
+            lastRow = lastCell.Row
+            lastCol = ws.Cells.Find(What:="*", LookIn:=xlFormulas, LookAt:=xlPart, _
+                                    SearchOrder:=xlByColumns, SearchDirection:=xlPrevious, MatchCase:=False).Column
+            If startCell.Row <= lastRow And startCell.Column <= lastCol Then
+                ws.Range(startCell, ws.Cells(lastRow, lastCol)).ClearContents
+            End If
+        End If
+    End If
+
+    ' 4) 전체 글꼴 크기 10
+    ws.Cells.Font.Size = 10
+
+    ' 5) 창 고정(C2)
+    With ActiveWindow
+        .FreezePanes = False
+        ws.Range("C2").Select
+        .FreezePanes = True   ' 행 1, 열 A:B가 고정됨
+    End With
+
+    ' 6) 자동 필터 토글 & 사용자 지정 필터(Field 11, "*fp*")
+    Set rng = ws.UsedRange
+    If ws.AutoFilterMode Then ws.AutoFilterMode = False
+    rng.AutoFilter
+    If rng.Columns.Count >= 12 Then
+        rng.AutoFilter Field:=12, Criteria1:="=*fp*", Operator:=xlAnd
+    End If
+
+CleanExit:
+    Application.EnableEvents = True
+    Application.ScreenUpdating = True
+End Sub
+
